@@ -1,0 +1,23 @@
+module data_mem (
+    input clk,
+    input we,
+    input [3:0] addr,
+    input [3:0] data_in,
+    output [3:0] data_out
+);
+    reg [3:0] memory [0:15];
+    integer i;
+    
+    // Initialize memory to zero
+    initial begin
+        for(i = 0; i < 16; i = i + 1) memory[i] = 4'b0000;
+    end
+
+    // Asynchronous read
+    assign data_out = memory[addr]; 
+
+    // Synchronous write
+    always @(posedge clk) begin
+        if (we) memory[addr] <= data_in;
+    end
+endmodule
