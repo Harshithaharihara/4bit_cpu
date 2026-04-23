@@ -1,0 +1,17 @@
+module instr_mem (
+    input [3:0] addr,
+    output reg [7:0] data
+);
+    always @(*) begin
+        case(addr)
+            // Test Program: 3 + 5 = 8
+            4'd0: data = {4'b0011, 4'd5};  // LDI 5 (Load 5 into ACC)
+            4'd1: data = {4'b0010, 4'd10}; // STA 10 (Store ACC into mem[10])
+            4'd2: data = {4'b0011, 4'd3};  // LDI 3 (Load 3 into ACC)
+            4'd3: data = {4'b0100, 4'd10}; // ADD 10 (Add mem[10] to ACC: 3 + 5)
+            4'd4: data = {4'b0010, 4'd11}; // STA 11 (Store ACC into mem[11])
+            4'd5: data = {4'b1111, 4'd0};  // HLT (Halt execution)
+            default: data = 8'b0000_0000;  // NOP
+        endcase
+    end
+endmodule
