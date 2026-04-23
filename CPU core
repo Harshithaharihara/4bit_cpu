@@ -1,0 +1,86 @@
+module cpu_4bit (
+    input clk,
+    input reset,
+    output reg [3:0] acc, // Output to monitor in testbench
+    output reg halt
+);
+    // Instruction Opcodes
+    localparam LDA = 4'b0001;
+    localparam STA = 4'b0010;
+    localparam LDI = 4'b0011;
+    localparam ADD = 4'b0100;
+    localparam SUB = 4'b0101;
+    localparam AND = 4'b0110;
+    localparam JMP = 4'b0111;
+    localparam HLT = 4'b1111;
+
+    // FSM States
+    localparam FETCH   = 1'b0;
+    localparam EXECUTE = 1'b1;
+
+    reg [3:0] pc;
+    reg [7:0] ir;
+    reg state;
+
+    wire [7:0] i_data;
+    wire [3:0] d_addr = ir[3:0]; // Operand acts as memory address
+    wire [3:0] d_data_in;
+    reg  [3:0] d_data_out;
+    reg  d_we;
+
+    wire [3:0] alu_result;
+    reg  [1:0] alu_op;
+
+    // Module Instantiations
+    instr_mem ROM (.addr(pc), .data(i_data));
+    data_mem  RAM (.clk(clk), .we(d_we), .addr(d_addr), .data_in(d_data_out), .data_out(d_data_in));
+    
+    wire [3:0] alu_a = acc;
+    wire [3:0] alu_b = d_data_in;
+    alu       ALU (.a(alu_a), .b(alu_b), .op(alu_op), .result(alu_result));
+
+    // ALU Decoder
+    always @(*) begin
+        case(ir[7:4])
+            SUB: alu_op = 2'b01;
+            AND: alu_op = 2'b10;
+            default: alu_op = 2'b00; // ADD is default
+        endcase
+    end
+
+    // CPU Control Unit
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            pc <= 0;
+            acc <= 0;
+            ir <= 0;
+            state <= FETCH;
+            halt <= 0;
+            d_we <= 0;
+        end else if (!halt) begin
+            if (state == FETCH) begin
+                ir <= i_data;      // Fetch instruction
+                pc <= pc + 1;      // Increment PC
+                d_we <= 0;         // Prevent memory writes
+                state <= EXECUTE;  // Move to next state
+            end else begin
+                state <= FETCH;    // Default next state
+                case (ir[7:4])
+                    LDA: acc <= d_data_in;
+                    STA: begin
+                        d_data_out <= acc;
+                        d_we <= 1;
+                    end
+                    LDI: acc <= ir[3:0];
+                    ADD: acc <= alu_result;
+                    SUB: acc <= alu_result;
+                    AND: acc <= alu_result;
+                    JMP: pc <= ir[3:0];
+                    HLT: halt <= 1;
+                endcase
+            end
+        end else begin
+            d_we <= 0; // Turn off write enable when halted
+        end
+    end
+endmodule
